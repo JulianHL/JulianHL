@@ -34,10 +34,6 @@ jobs:
         run: |
           COLOR=$(curl -s "https://img.shields.io/badge/language-${LANGUAGE}-color?logo=${LANGUAGE}&style=flat-square" | grep -oP '(?<=#)[0-9A-Fa-f]{6}')
           echo "Color for $LANGUAGE is #$COLOR"
-        
-      - name: Update snake.svg with new color
-        run: |
-          sed -i "s/--cs:.*;/--cs:#$COLOR;/g" path/to/snake.svg
 
       - name: push snake.svg to the output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
