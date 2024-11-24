@@ -22,16 +22,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Get the top language used in the repository
-      - name: Get top language
-        id: language
+      - name: Get most used language
+        id: lang
         run: |
-          # Fetch the top language from GitHub API
-          TOP_LANGUAGE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/languages | \
-          jq -r 'to_entries | max_by(.value) | .key')
-          echo "Top language is: $TOP_LANGUAGE"
-          echo "top_language=$TOP_LANGUAGE" >> $GITHUB_ENV
+          response=$(curl -s "https://github-readme-stats.vercel.app/api/top-langs?username=JulianHL&layout=compact&langs_count=1")
+          most_used_language=$(echo $response | jq -r 'keys | .[0]')
+          echo "Most used language: $most_used_language"
+          echo "language=$most_used_language" >> $GITHUB_ENV
 
       # Extract the color of the top language from languages.yml
       - name: Get language color
@@ -41,7 +38,7 @@ jobs:
           curl -o languages.yml https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml
           
           # Extract the color associated with the top language
-          COLOR=$(grep -A 1 "^${{ env.top_language }}:" languages.yml | grep "color:" | awk '{print $2}')
+          COLOR=$(grep -A 1 "^${{ env.language }}:" languages.yml | grep "color:" | awk '{print $2}')
           COLOR=${COLOR//\"/} # Remove quotes if present
           echo "Language color is: $COLOR"
           echo "language_color=$COLOR" >> $GITHUB_ENV
