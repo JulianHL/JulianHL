@@ -22,13 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Get most used language
-        id: lang
-        run: |
-          response=$(curl -s "https://github-readme-stats.vercel.app/api/top-langs?username=JulianHL&layout=compact&langs_count=1")
-          most_used_language=$(echo $response | jq -r 'keys | .[0]')
-          echo "Most used language: $most_used_language"
-          echo "language=$most_used_language" >> $GITHUB_ENV
+
 
       # Extract the color of the top language from languages.yml
       - name: Get language color
@@ -38,7 +32,7 @@ jobs:
           curl -o languages.yml https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml
           
           # Extract the color associated with the top language
-          COLOR=$(grep -A 1 "^${{ env.language }}:" languages.yml | grep "color:" | awk '{print $2}')
+          COLOR=$(grep -A 1 "JavaScript" languages.yml | grep "color:" | awk '{print $2}')
           COLOR=${COLOR//\"/} # Remove quotes if present
           echo "Language color is: $COLOR"
           echo "language_color=$COLOR" >> $GITHUB_ENV
