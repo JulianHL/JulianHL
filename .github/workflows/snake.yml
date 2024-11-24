@@ -1,51 +1,64 @@
-name: Update Snake Color
+name: Generate snake animation
 
 on:
-  schedule:
-    - cron: "0 */12 * * *" # Ejecutar cada 12 horas
-  workflow_dispatch: # Permitir ejecución manual
+  schedule: # execute every 12 hours
+    - cron: "* */12 * * *"
+
+  workflow_dispatch:
+
+  push:
+    branches:
+      - master
 
 jobs:
-  update-snake:
+  generate:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
-      # Paso 1: Checkout del repositorio
-      - name: Checkout Repository
+      # Checkout the repository to access files like `languages.yml`
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Paso 2: Descargar el archivo languages.yml
-      - name: Download Linguist Languages
+      # Get the top language used in the repository
+      - name: Get top language
+        id: language
         run: |
+          # Fetch the top language from GitHub API
+          TOP_LANGUAGE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/languages | \
+          jq -r 'to_entries | max_by(.value) | .key')
+          echo "Top language is: $TOP_LANGUAGE"
+          echo "top_language=$TOP_LANGUAGE" >> $GITHUB_ENV
+
+      # Extract the color of the top language from languages.yml
+      - name: Get language color
+        id: color
+        run: |
+          # Download languages.yml from GitHub Linguist repository
           curl -o languages.yml https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml
+          
+          # Extract the color associated with the top language
+          COLOR=$(grep -A 1 "^${{ env.top_language }}:" languages.yml | grep "color:" | awk '{print $2}')
+          COLOR=${COLOR//\"/} # Remove quotes if present
+          echo "Language color is: $COLOR"
+          echo "language_color=$COLOR" >> $GITHUB_ENV
 
-      # Paso 3: Obtener el lenguaje que más utilizas y extraer su color
-      - name: Extract Top Language Color
-        id: extract_color
-        run: |
-          # Tu lenguaje principal (puedes reemplazarlo dinámicamente en el futuro)
-          TOP_LANGUAGE=$(curl -s "https://api.github.com/users/${{ github.actor }}/repos" | jq -r '.[] | .language' | sort | uniq -c | sort -nr | head -n 1 | awk '{print $2}')
-          echo "Lenguaje principal detectado: $TOP_LANGUAGE"
-
-          # Buscar el color en el archivo languages.yml
-          COLOR=$(grep -A 1 "^${TOP_LANGUAGE}:" languages.yml | grep "color:" | awk '{print $2}')
-          echo "Color detectado: $COLOR"
-
-          # Exportar el color como salida del paso
-          echo "color=$COLOR" >> $GITHUB_ENV
-
-      # Paso 4: Generar la animación de la serpiente con el color detectado
-      - name: Generate Snake Animation
+      # Generate the snake.svg using the extracted color
+      - name: Generate snake.svg
         uses: Platane/snk/svg-only@v3
         with:
-          github_user_name: ${{ github.actor }}
-          outputs: dist/snake.svg?palette=${{ env.color }}
+          github_user_name: ${{ github.repository_owner }}
+          outputs: dist/snake.svg?palette=custom
+          colors: ${{ env.language_color }}
 
-      # Paso 5: Subir la animación generada al branch de salida
-      - name: Push Snake Animation
-        uses: crazy-max/ghaction-github-pages@v3
+      # Push the updated snake.svg to the output branch
+      - name: Push snake.svg to the output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
         with:
           target_branch: output
           build_dir: dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
