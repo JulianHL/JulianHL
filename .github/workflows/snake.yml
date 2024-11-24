@@ -24,9 +24,22 @@ jobs:
           github_user_name: ${{github.actor}}  
           outputs: dist/snake.svg?palette=github-dark
 
-      - name: Modify snake color in SVG
+      - name: Get top language
         run: |
-          sed -i 's/--cs:purple/--cs:#ffa523/g' dist/snake.svg  # Reemplaza purple por blue
+          curl -s https://api.github.com/users/JulianHL/repos | jq '.[].language' | sort | uniq -c | sort -nr | head -n 1 | awk '{print $2}' > top_language.txt
+          LANGUAGE=$(cat top_language.txt)
+          echo "Top language: $LANGUAGE"
+        
+      - name: Get language color from Shields.io
+        run: |
+          # Utilizamos la API de Shields.io para obtener el color
+          COLOR=$(curl -s "https://img.shields.io/badge/language-${LANGUAGE}-color?logo=${LANGUAGE}&style=flat-square" | grep -oP '(?<=#)[0-9A-Fa-f]{6}')
+          echo "Color for $LANGUAGE is #$COLOR"
+        
+      - name: Update snake.svg with new color
+        run: |
+          # Reemplazar el color en el archivo SVG
+          sed -i "s/--cs:.*;/--cs:#$COLOR;/g" path/to/snake.svg
 
       - name: push snake.svg to the output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
